@@ -25,7 +25,7 @@
   "title": "Spell Check",
   "description": "Spell check selected text using an AI model and replace it with the corrected version",
   "icon": "command-icon.png",
-  "author": "davidgatea",
+  "author": "david_gatea",
   "categories": [
     "Productivity"
   ],
