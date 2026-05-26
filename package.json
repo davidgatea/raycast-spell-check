@@ -1,0 +1,71 @@
+{
+  "dependencies": {
+    "@raycast/api": "^1.98.0",
+    "@raycast/utils": "^1.19.1"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "22.14.0",
+    "@types/react": "19.0.8",
+    "eslint": "^8.57.1",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
+  },
+  "name": "spell-check",
+  "scripts": {
+    "build": "ray build",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "prepublishOnly": "echo \"Error: no publish\" && exit 1",
+    "publish": "npx @raycast/api@latest publish"
+  },
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "title": "Spell Check",
+  "description": "Spell check selected text using an AI model and replace it with the corrected version",
+  "icon": "command-icon.png",
+  "author": "david",
+  "categories": [
+    "Productivity"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "macOS"
+  ],
+  "commands": [
+    {
+      "name": "spell-check",
+      "title": "Spell Check",
+      "description": "Spell check the currently selected text using AI",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "apiKey",
+      "type": "password",
+      "title": "API Key",
+      "description": "API key for your OpenAI-compatible provider (OpenAI, DeepSeek, Groq, etc.)",
+      "required": true,
+      "placeholder": "sk-..."
+    },
+    {
+      "name": "baseUrl",
+      "type": "textfield",
+      "title": "API Base URL",
+      "description": "Base URL for the API endpoint",
+      "required": true,
+      "default": "https://api.deepseek.com/v1",
+      "placeholder": "https://api.openai.com/v1"
+    },
+    {
+      "name": "model",
+      "type": "textfield",
+      "title": "Model",
+      "description": "Model name to use for spell checking",
+      "required": true,
+      "default": "deepseek-chat",
+      "placeholder": "gpt-4o-mini"
+    }
+  ]
+}
