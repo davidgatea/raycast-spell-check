@@ -45,6 +45,7 @@ export class ApiError extends Error {
 export async function spellCheck(
   text: string,
   prefs: Preferences,
+  signal?: AbortSignal,
 ): Promise<string> {
   const url = `${prefs.baseUrl}/chat/completions`;
 
@@ -64,30 +65,39 @@ export async function spellCheck(
         ],
         temperature: 0,
       }),
+      signal,
     });
   } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") throw e;
     throw new ApiError(
       e instanceof Error ? e.message : "Failed to connect to API",
       0,
     );
   }
 
+  const rawBody = await res.text();
+
   if (!res.ok) {
     let apiMessage = `HTTP ${res.status}`;
     let apiType: string | undefined;
     try {
-      const body = (await res.json()) as ChatResponse;
+      const body = JSON.parse(rawBody) as ChatResponse;
       if (body.error) {
         apiMessage = body.error.message ?? apiMessage;
         apiType = body.error.type;
       }
     } catch {
-      apiMessage = (await res.text()) || apiMessage;
+      apiMessage = rawBody || apiMessage;
     }
     throw new ApiError(apiMessage, res.status, apiType);
   }
 
-  const data = (await res.json()) as ChatResponse;
+  let data: ChatResponse;
+  try {
+    data = JSON.parse(rawBody) as ChatResponse;
+  } catch {
+    throw new ApiError("Invalid JSON response from API", 502);
+  }
 
   if (data.error) {
     throw new ApiError(

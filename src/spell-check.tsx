@@ -9,20 +9,26 @@ import {
   showToast,
   Toast,
 } from "@raycast/api";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { spellCheck } from "./lib/api";
-import { getPreferences, Preferences } from "./lib/preferences";
+import { getPreferences } from "./lib/preferences";
 import { ErrorView } from "./lib/errors";
+
+const MAX_CHARS_FALLBACK = 10000;
+
+function escapeMarkdown(text: string): string {
+  return text.replace(/([*~`_[\]\\#>|])/g, "\\$1");
+}
 
 function buildMarkdown(original: string, corrected: string): string {
   if (corrected === original) {
-    return [`## No Changes Needed`, ``, original].join("\n");
+    return [`## No Changes Needed`, ``, escapeMarkdown(original)].join("\n");
   }
 
   return [
     `## Corrected`,
     ``,
-    corrected,
+    escapeMarkdown(corrected),
     ``,
     `---`,
     ``,
@@ -37,11 +43,11 @@ function buildMarkdown(original: string, corrected: string): string {
 function ResultMetadata({
   original,
   corrected,
-  prefs,
+  model,
 }: {
   original: string;
   corrected: string;
-  prefs: Preferences;
+  model: string;
 }) {
   const changed = corrected !== original;
 
@@ -56,7 +62,7 @@ function ResultMetadata({
       <Detail.Metadata.Separator />
       <Detail.Metadata.Label
         title="Model"
-        text={prefs.model}
+        text={model}
         icon={Icon.ComputerChip}
       />
       <Detail.Metadata.Label
@@ -71,30 +77,45 @@ function ResultMetadata({
 export default function Command() {
   const [original, setOriginal] = useState("");
   const [corrected, setCorrected] = useState("");
-  const [prefs, setPrefs] = useState<Preferences | null>(null);
+  const [model, setModel] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    run();
-  }, []);
+  const run = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-  async function run() {
+    setError(null);
+    setIsLoading(true);
+    setCorrected("");
+
     try {
       const text = await getSelectedText();
       if (!text.trim()) {
-        throw new Error("Unable to get selected text");
+        throw new Error("Selected text is empty");
       }
+
+      const prefs = getPreferences();
+      const maxChars = prefs.maxCharacters || MAX_CHARS_FALLBACK;
+      if (text.length > maxChars) {
+        throw new Error(
+          `Selection too long (${text.length.toLocaleString()} chars). ` +
+            `Maximum is ${maxChars.toLocaleString()}. ` +
+            `Select a shorter passage or increase the limit in preferences.`,
+        );
+      }
+
       setOriginal(text);
+      setModel(prefs.model);
 
       await showToast({
         style: Toast.Style.Animated,
         title: "Spell checking…",
       });
 
-      const p = getPreferences();
-      setPrefs(p);
-      const result = await spellCheck(text, p);
+      const result = await spellCheck(text, prefs, controller.signal);
       setCorrected(result);
 
       const changed = result !== text;
@@ -103,15 +124,21 @@ export default function Command() {
         title: changed ? "Corrections found" : "No corrections needed",
       });
     } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
       setError(e);
       await showToast({ style: Toast.Style.Failure, title: "Failed" });
     } finally {
       setIsLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    run();
+    return () => abortRef.current?.abort();
+  }, [run]);
 
   if (error) {
-    return <ErrorView error={error} />;
+    return <ErrorView error={error} onRetry={run} />;
   }
 
   const changed = corrected !== original;
@@ -121,11 +148,11 @@ export default function Command() {
       isLoading={isLoading}
       markdown={isLoading ? "" : buildMarkdown(original, corrected)}
       metadata={
-        !isLoading && corrected && prefs ? (
+        !isLoading && corrected && model ? (
           <ResultMetadata
             original={original}
             corrected={corrected}
-            prefs={prefs}
+            model={model}
           />
         ) : undefined
       }
@@ -134,13 +161,13 @@ export default function Command() {
           <ActionPanel>
             {changed && (
               <Action
-                title="Accept & Replace"
+                title="Accept & Paste"
                 icon={Icon.CheckCircle}
                 onAction={async () => {
                   await Clipboard.paste(corrected);
                   await showToast({
                     style: Toast.Style.Success,
-                    title: "Text replaced",
+                    title: "Corrected text pasted",
                   });
                 }}
               />

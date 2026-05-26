@@ -13,7 +13,9 @@ type ExtensionPreferences = {
   /** API Base URL - Base URL for the API endpoint */
   "baseUrl": string,
   /** Model - Model name to use for spell checking */
-  "model": string
+  "model": string,
+  /** Max Characters - Maximum number of characters allowed per spell check request */
+  "maxCharacters": string
 }
 
 /** Preferences accessible in all the extension's commands */

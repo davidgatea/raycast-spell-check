@@ -77,6 +77,24 @@ function diagnose(error: unknown): ErrorInfo {
     };
   }
 
+  if (msg.includes("Selected text is empty")) {
+    return {
+      title: "Empty Selection",
+      message:
+        "The selected text is empty or contains only whitespace.\n\n" +
+        "Select some text with content and try again.",
+      fixable: false,
+    };
+  }
+
+  if (msg.includes("Selection too long")) {
+    return {
+      title: "Text Too Long",
+      message: msg,
+      fixable: true,
+    };
+  }
+
   return {
     title: "Unexpected Error",
     message: `> ${msg}`,
@@ -84,7 +102,13 @@ function diagnose(error: unknown): ErrorInfo {
   };
 }
 
-export function ErrorView({ error }: { error: unknown }) {
+export function ErrorView({
+  error,
+  onRetry,
+}: {
+  error: unknown;
+  onRetry?: () => void;
+}) {
   const info = diagnose(error);
   const markdown = `## ${info.title}\n\n${info.message}`;
 
@@ -93,11 +117,19 @@ export function ErrorView({ error }: { error: unknown }) {
       markdown={markdown}
       actions={
         <ActionPanel>
+          {onRetry && (
+            <Action
+              title="Try Again"
+              icon={Icon.RotateClockwise}
+              onAction={onRetry}
+            />
+          )}
           {info.fixable && (
             <Action
               title="Open Preferences"
               icon={Icon.Gear}
               onAction={openExtensionPreferences}
+              shortcut={{ modifiers: ["cmd"], key: "," }}
             />
           )}
         </ActionPanel>

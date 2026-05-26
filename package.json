@@ -20,6 +20,7 @@
     "prepublishOnly": "echo \"Error: no publish\" && exit 1",
     "publish": "npx @raycast/api@latest publish"
   },
+  "version": "1.0.0",
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "title": "Spell Check",
   "description": "Spell check selected text using an AI model and replace it with the corrected version",
@@ -66,6 +67,15 @@
       "required": true,
       "default": "deepseek-chat",
       "placeholder": "gpt-4o-mini"
+    },
+    {
+      "name": "maxCharacters",
+      "type": "textfield",
+      "title": "Max Characters",
+      "description": "Maximum number of characters allowed per spell check request",
+      "required": false,
+      "default": "10000",
+      "placeholder": "10000"
     }
   ]
 }
